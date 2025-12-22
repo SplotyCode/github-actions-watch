@@ -1,7 +1,10 @@
+@file:OptIn(ExperimentalTime::class)
+
 package de.scandurra.githubactionswatch.client
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -9,7 +12,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-@OptIn(ExperimentalTime::class)
 data class RateLimitInformation(
     val remaining: Long,
     val resetAt: Instant?,
@@ -21,7 +23,6 @@ data class RateLimitInformation(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 fun extractRateLimit(exception: ClientRequestException): RateLimitInformation {
     val response = exception.response
     /* https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28 */
@@ -35,4 +36,17 @@ fun extractRateLimit(exception: ClientRequestException): RateLimitInformation {
         resetEpoch?.let { Instant.fromEpochSeconds(it) },
         statuscodeCouldMeanRateLimited && remaining == 0L
     )
+}
+
+suspend fun <T> requestWithRateLimitHandling(block: suspend () -> T): T {
+    try {
+        return block()
+    } catch (exception: ClientRequestException) {
+        val rateLimitInformation = extractRateLimit(exception)
+        if (rateLimitInformation.canceledBecauseOfRateLimit) {
+            delay(rateLimitInformation.suggestWaitTime())
+            return block()
+        }
+        throw exception
+    }
 }
