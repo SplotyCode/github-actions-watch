@@ -53,34 +53,31 @@ class GitHubClient(
         perPage: Int = 100,
         created: TimeRange? = null,
         maxPages: Int = 50,
-    ): Flow<WorkflowRun> = flow {
-        var page = startPage
-        while (page <= maxPages) {
-            val response: WorkflowRunsResponse = requestWithRateLimitHandling {
-                http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs") {
-                    parameter("per_page", perPage)
-                    parameter("page", page)
-                    created?.let { parameter("created", it.toQueryParam()) }
-                }.body()
-            }
-
-            if (response.workflowRuns.isEmpty()) return@flow
-            response.workflowRuns.forEach { emit(it) }
-            if (response.workflowRuns.size < perPage) return@flow
-            page++
+    ): Flow<WorkflowRun> = pagedFlow(startPage, perPage, maxPages) { page, perPage ->
+        val response: WorkflowRunsResponse = requestWithRateLimitHandling {
+            http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs") {
+                parameter("per_page", perPage)
+                parameter("page", page)
+                created?.let { parameter("created", it.toQueryParam()) }
+            }.body()
         }
+        response.workflowRuns
     }
 
-    suspend fun listJobsForWorkflowRun(
+    fun listJobsForWorkflowRun(
         repoId: RepoIdentifier,
         runId: Long,
-        page: Int = 1,
+        startPage: Int = 1,
         perPage: Int = 100,
-    ): WorkflowJobsResponse = requestWithRateLimitHandling {
-        http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs/$runId/jobs") {
-            parameter("per_page", perPage)
-            parameter("page", page)
-        }.body()
+        maxPages: Int = 50,
+    ): Flow<WorkflowJob> = pagedFlow(startPage, perPage, maxPages) { page, perPage ->
+        val response: WorkflowJobsResponse = requestWithRateLimitHandling {
+            http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs/$runId/jobs") {
+                parameter("per_page", perPage)
+                parameter("page", page)
+            }.body()
+        }
+        response.jobs
     }
 
     override fun close() = http.close()
@@ -108,3 +105,19 @@ data class TimeRange(
 }
 
 private fun Instant.toIsoString(): String = this.toString()
+
+private fun <T> pagedFlow(
+    startPage: Int = 1,
+    perPage: Int = 100,
+    maxPages: Int = 50,
+    fetchPage: suspend (page: Int, perPage: Int) -> List<T>
+): Flow<T> = flow {
+    var page = startPage
+    while (page <= maxPages) {
+        val items = fetchPage(page, perPage)
+        if (items.isEmpty()) return@flow
+        items.forEach { emit(it) }
+        if (items.size < perPage) return@flow
+        page++
+    }
+}

@@ -31,11 +31,11 @@ data class WorkflowJob(
     val id: Long,
     val name: String,
     val status: JobStatus,
-    val conclusion: Conclusion? = null,
+    val conclusion: Conclusion,
 
     @SerialName("started_at")
     @Serializable(with = IsoInstantSerializer::class)
-    val startedAt: Instant? = null,
+    val startedAt: Instant,
 
     @SerialName("completed_at")
     @Serializable(with = IsoInstantSerializer::class)
