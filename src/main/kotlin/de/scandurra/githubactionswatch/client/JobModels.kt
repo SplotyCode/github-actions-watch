@@ -31,7 +31,7 @@ data class WorkflowJob(
     val id: Long,
     val name: String,
     val status: JobStatus,
-    val conclusion: Conclusion,
+    val conclusion: Conclusion?,
 
     @SerialName("started_at")
     val startedAt: Instant,

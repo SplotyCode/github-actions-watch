@@ -95,7 +95,9 @@ class GitHubActionsWatcher(
 
                 if (job.status == JobStatus.COMPLETED && job.completedAt != null) {
                     val e = WatchEvent.JobFinished(
-                        job.completedAt, WatchEvent.JobIdentifier(runId, job.id), job.conclusion
+                        job.completedAt,
+                        WatchEvent.JobIdentifier(runId, job.id),
+                        job.conclusion ?: throw IllegalStateException("No conclusion for job ${job.id}")
                     )
                     emitIfNew(e, processed, out)
                     latestCompletion = maxInstant(latestCompletion, job.completedAt)
