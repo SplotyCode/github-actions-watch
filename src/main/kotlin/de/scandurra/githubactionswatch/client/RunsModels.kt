@@ -46,14 +46,11 @@ data class WorkflowRun(
     val conclusion: Conclusion? = null,
 
     @SerialName("created_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val createdAt: Instant,
 
     @SerialName("run_started_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val runStartedAt: Instant? = null,
 
     @SerialName("updated_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val updatedAt: Instant,
 )

@@ -34,11 +34,9 @@ data class WorkflowJob(
     val conclusion: Conclusion,
 
     @SerialName("started_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val startedAt: Instant,
 
     @SerialName("completed_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val completedAt: Instant? = null,
 
     val steps: List<WorkflowStep> = emptyList(),
@@ -54,10 +52,8 @@ data class WorkflowStep(
     val conclusion: Conclusion? = null,
 
     @SerialName("started_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val startedAt: Instant? = null,
 
     @SerialName("completed_at")
-    @Serializable(with = IsoInstantSerializer::class)
     val completedAt: Instant? = null,
 )
