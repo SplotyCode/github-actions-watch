@@ -17,12 +17,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-data class WatchEventContext(
-    val event: WatchEvent,
-    val branch: String?,
-    val commitSha: String?,
-)
-
 class GitHubActionsWatcher(
     private val client: GitHubActionsClient,
     private val store: WatchCursorStore,
@@ -30,12 +24,7 @@ class GitHubActionsWatcher(
     private val overlap: Duration = 2.minutes,
     private val dedupeRetention: Duration = 30.minutes,
 ) {
-    fun watch(repo: RepoIdentifier, pollInterval: Duration = 10.seconds): Flow<WatchEvent> =
-        watchWithContext(repo, pollInterval).let { ctxFlow ->
-            flow { ctxFlow.collect { emit(it.event) } }
-        }
-
-    fun watchWithContext(repo: RepoIdentifier, pollInterval: Duration = 10.seconds): Flow<WatchEventContext> = flow {
+    fun watch(repo: RepoIdentifier, pollInterval: Duration = 10.seconds): Flow<WatchEvent> = flow {
         var state = store.load(repo) ?: bootstrap(repo)
 
         while (true) {
@@ -44,7 +33,7 @@ class GitHubActionsWatcher(
             state = nextState
             store.save(repo, state)
 
-            events.sortedBy { it.event.occurredAt }.forEach { emit(it) }
+            events.sortedBy { it.occurredAt }.forEach { emit(it) }
             delay(pollInterval)
         }
     }
@@ -62,7 +51,7 @@ class GitHubActionsWatcher(
         repo: RepoIdentifier,
         state: WatchCursor,
         now: Instant,
-    ): Pair<List<WatchEventContext>, WatchCursor> {
+    ): Pair<List<WatchEvent>, WatchCursor> {
 
         val queryFrom = maxOf(state.bootstrapInstant, state.stableScannedTo.minus(overlap))
 
@@ -73,19 +62,14 @@ class GitHubActionsWatcher(
 
         val openRuns = state.openRuns.toMutableMap()
         val processed = state.processedEventIds.toMutableMap()
-        val out = mutableListOf<WatchEventContext>()
+        val out = mutableListOf<WatchEvent>()
 
         for (run in runs) {
-            val meta = RunMeta(
-                createdAt = run.createdAt,
-                branch = run.headBranch,
-                sha = run.headSha,
-                name = run.name,
-            )
+            val meta = RunMeta(run.createdAt)
             openRuns.putIfAbsent(run.id, meta)
 
             val queuedEvent = WatchEvent.RunQueued(run.createdAt, run.id, run.headBranch, run.headSha)
-            emitIfNew(queuedEvent, processed, out, run.headBranch, run.headSha)
+            emitIfNew(queuedEvent, processed, out)
         }
 
         val runIdsToPoll = openRuns.keys.toList()
@@ -106,20 +90,19 @@ class GitHubActionsWatcher(
                         identifier = WatchEvent.JobIdentifier(runId, job.id),
                         jobName = job.name,
                     )
-                    emitIfNew(event, processed, out, meta.branch, meta.sha)
+                    emitIfNew(event, processed, out)
                 }
 
                 if (job.status == JobStatus.COMPLETED && job.completedAt != null) {
                     val e = WatchEvent.JobFinished(
                         job.completedAt, WatchEvent.JobIdentifier(runId, job.id), job.conclusion
                     )
-                    emitIfNew(e, processed, out, meta.branch, meta.sha)
+                    emitIfNew(e, processed, out)
                     latestCompletion = maxInstant(latestCompletion, job.completedAt)
                 } else {
                     anyJobIncomplete = true
                 }
 
-                // Steps
                 for (step in job.steps) {
                     step.startedAt?.let {
                         val event = WatchEvent.StepStarted(
@@ -128,7 +111,7 @@ class GitHubActionsWatcher(
                                 stepNumber = step.number,
                             ), step.name
                         )
-                        emitIfNew(event, processed, out, meta.branch, meta.sha)
+                        emitIfNew(event, processed, out)
                     }
                     if (step.status == StepStatus.COMPLETED && step.completedAt != null) {
                         val event = WatchEvent.StepFinished(
@@ -138,7 +121,7 @@ class GitHubActionsWatcher(
                             ), step.conclusion
                                 ?: throw IllegalStateException("No conclusion for step ${step.number}")
                         )
-                        emitIfNew(event, processed, out, meta.branch, meta.sha)
+                        emitIfNew(event, processed, out)
                         latestCompletion = maxInstant(latestCompletion, step.completedAt)
                     }
                 }
@@ -171,14 +154,12 @@ class GitHubActionsWatcher(
     private fun emitIfNew(
         event: WatchEvent,
         processed: MutableMap<String, Instant>,
-        out: MutableList<WatchEventContext>,
-        branch: String?,
-        sha: String?,
+        out: MutableList<WatchEvent>,
     ) {
         val id = eventId(event)
         if (processed.containsKey(id)) return
         processed[id] = event.occurredAt
-        out += WatchEventContext(event, branch, sha)
+        out += event
     }
 
     private fun eventId(e: WatchEvent): String = when (e) {

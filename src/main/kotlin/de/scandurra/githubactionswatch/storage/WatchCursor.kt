@@ -11,10 +11,7 @@ import kotlin.time.Instant
 @Serializable
 data class RunMeta(
     @Serializable(with = IsoInstantSerializer::class)
-    val createdAt: Instant,
-    val branch: String,
-    val sha: String,
-    val name: String? = null,
+    val createdAt: Instant
 )
 
 @OptIn(ExperimentalTime::class)
