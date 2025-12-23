@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.2.21"
     kotlin("plugin.serialization") version "2.3.0"
+    application
 }
 
 group = "de.scandurra"
@@ -26,4 +27,8 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+application {
+    mainClass.set("de.scandurra.githubactionswatch.MainKt")
 }
