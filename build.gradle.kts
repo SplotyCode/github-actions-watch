@@ -18,6 +18,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.6")
+    implementation("org.slf4j:slf4j-simple:2.0.16")
     testImplementation(kotlin("test"))
 }
 
