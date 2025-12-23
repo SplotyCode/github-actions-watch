@@ -1,29 +1,44 @@
 package de.scandurra.githubactionswatch.cli
 
+import de.scandurra.githubactionswatch.client.Conclusion
 import de.scandurra.githubactionswatch.client.RepoIdentifier
 import de.scandurra.githubactionswatch.watch.WatchEvent
 import kotlin.time.ExperimentalTime
 
+const val RESET = "\u001B[0m"
+const val BOLD = "\u001B[1m"
+const val GRAY = "\u001B[90m"
+const val GREEN = "\u001B[32m"
+const val RED = "\u001B[31m"
+const val BLUE = "\u001B[34m"
+const val YELLOW = "\u001B[33m"
+
 @OptIn(ExperimentalTime::class)
 fun formatWatchEvent(event: WatchEvent, repo: RepoIdentifier): String {
-    val ts = event.occurredAt.toString()
-    val repoStr = "${repo.owner}/${repo.repo}"
+    val localTime = event.occurredAt.toString()
+    val ts = "$GRAY[${localTime}]$RESET"
 
     return when (event) {
-        is WatchEvent.RunQueued ->
-            "$ts | $repoStr | RUN ${event.runId} QUEUED branch=${event.branch} sha=${shortSha(event.commitSha)}"
+        is WatchEvent.RunQueued -> {
+            val branchInfo = "$BOLD${event.branch}$RESET @ $GRAY${shortSha(event.commitSha)}$RESET"
+            "$ts  ${YELLOW}RUN QUEUED$RESET  $branchInfo (ID: ${event.runId})"
+        }
 
         is WatchEvent.JobStarted ->
-            "$ts | $repoStr | JOB ${event.identifier.runId}/${event.identifier.jobId} START name=\"${event.jobName}\""
+            "$ts   ${BLUE}JOB START $RESET  ${event.jobName} ${GRAY}(Run: ${event.identifier.runId})$RESET"
 
-        is WatchEvent.JobFinished ->
-            "$ts | $repoStr | JOB ${event.identifier.runId}/${event.identifier.jobId} FINISH conclusion=${event.conclusion}"
+        is WatchEvent.JobFinished -> {
+            val color = if (event.conclusion == Conclusion.SUCCESS) GREEN else RED
+            "$ts   ${color}JOB FINISH$RESET ${event.conclusion} (Job: ${event.identifier.jobId})"
+        }
 
         is WatchEvent.StepStarted ->
-            "$ts | $repoStr | STEP ${event.identifier.job.runId}/${event.identifier.job.jobId}#${event.identifier.stepNumber} START name=\"${event.stepName}\""
+            "$ts     ${GRAY}STEP START$RESET #${event.identifier.stepNumber} ${event.stepName}"
 
-        is WatchEvent.StepFinished ->
-            "$ts | $repoStr | STEP ${event.identifier.job.runId}/${event.identifier.job.jobId}#${event.identifier.stepNumber} FINISH conclusion=${event.conclusion}"
+        is WatchEvent.StepFinished -> {
+            val color = if (event.conclusion == Conclusion.SUCCESS) GREEN else RED
+            "$ts     ${color}STEP ${event.conclusion}$RESET #${event.identifier.stepNumber}"
+        }
     }
 }
 
