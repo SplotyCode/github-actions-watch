@@ -93,7 +93,7 @@ class GitHubActionsWatcher(
                     emitIfNew(event, processed, out)
                 }
 
-                if (job.status == JobStatus.COMPLETED && job.completedAt != null) {
+                if (job.status == RunStatus.COMPLETED && job.completedAt != null) {
                     val e = WatchEvent.JobFinished(
                         job.completedAt,
                         WatchEvent.JobIdentifier(runId, job.id),
@@ -115,7 +115,7 @@ class GitHubActionsWatcher(
                         )
                         emitIfNew(event, processed, out)
                     }
-                    if (step.status == StepStatus.COMPLETED && step.completedAt != null) {
+                    if (step.status == RunStatus.COMPLETED && step.completedAt != null) {
                         val event = WatchEvent.StepFinished(
                             step.completedAt, WatchEvent.StepIdentifier(
                                 job = WatchEvent.JobIdentifier(runId, job.id),

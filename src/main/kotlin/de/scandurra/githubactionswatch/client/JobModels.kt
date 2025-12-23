@@ -11,26 +11,13 @@ data class WorkflowJobsResponse(
     val jobs: List<WorkflowJob>,
 )
 
-@Serializable
-enum class JobStatus {
-    @SerialName("queued") QUEUED,
-    @SerialName("in_progress") IN_PROGRESS,
-    @SerialName("completed") COMPLETED,
-}
-
-@Serializable
-enum class StepStatus {
-    @SerialName("queued") QUEUED,
-    @SerialName("in_progress") IN_PROGRESS,
-    @SerialName("completed") COMPLETED,
-}
 
 @OptIn(ExperimentalTime::class)
 @Serializable
 data class WorkflowJob(
     val id: Long,
     val name: String,
-    val status: JobStatus,
+    val status: RunStatus,
     val conclusion: Conclusion?,
 
     @SerialName("started_at")
@@ -48,7 +35,7 @@ data class WorkflowStep(
     val name: String,
     val number: Int,
 
-    val status: StepStatus,
+    val status: RunStatus,
     val conclusion: Conclusion? = null,
 
     @SerialName("started_at")
