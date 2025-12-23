@@ -26,7 +26,7 @@ private const val GITHUB_API_VERSION = "2022-11-28"
 class GitHubClient(
     token: String,
     requestTimeoutMillis: Long = 1000
-): AutoCloseable {
+): GitHubActionsClient {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val http = HttpClient(CIO) {
@@ -47,12 +47,12 @@ class GitHubClient(
         }
     }
 
-    fun listAllWorkflowRuns(
+    override fun listAllWorkflowRuns(
         repoId: RepoIdentifier,
-        startPage: Int = 1,
-        perPage: Int = 100,
-        created: TimeRange? = null,
-        maxPages: Int = 50,
+        startPage: Int,
+        perPage: Int,
+        created: TimeRange?,
+        maxPages: Int,
     ): Flow<WorkflowRun> = pagedFlow(startPage, perPage, maxPages) { page, perPage ->
         val response: WorkflowRunsResponse = requestWithRateLimitHandling {
             http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs") {
@@ -64,12 +64,12 @@ class GitHubClient(
         response.workflowRuns
     }
 
-    fun listJobsForWorkflowRun(
+    override fun listJobsForWorkflowRun(
         repoId: RepoIdentifier,
         runId: Long,
-        startPage: Int = 1,
-        perPage: Int = 100,
-        maxPages: Int = 50,
+        startPage: Int,
+        perPage: Int,
+        maxPages: Int,
     ): Flow<WorkflowJob> = pagedFlow(startPage, perPage, maxPages) { page, perPage ->
         val response: WorkflowJobsResponse = requestWithRateLimitHandling {
             http.get("/repos/${repoId.owner}/${repoId.repo}/actions/runs/$runId/jobs") {

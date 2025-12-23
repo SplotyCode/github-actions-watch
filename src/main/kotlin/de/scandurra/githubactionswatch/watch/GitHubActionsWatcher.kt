@@ -24,7 +24,7 @@ data class WatchEventContext(
 )
 
 class GitHubActionsWatcher(
-    private val client: GitHubClient,
+    private val client: GitHubActionsClient,
     private val store: WatchCursorStore,
     private val safetyDelay: Duration = 5.minutes,
     private val overlap: Duration = 2.minutes,
