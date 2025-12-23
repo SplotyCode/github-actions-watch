@@ -12,8 +12,9 @@ This is a Kotlin CLI tool that monitors GitHub Actions workflow activity for a r
 
 ## State and resuming
 
-- State files are stored under the state directory (default: .github-actions-watch)
-- One file per repository, named like Owner__Repo.json
+State is stored in one json per repository (`.github-actions-watch/Owner__Repo.json` by default).
+It remembers how far we’ve safely looked, which runs are still in flight (so they’ll be re-checked), and what events from the active runs we’ve already printed so you don’t see repeats.
+Each poll intentionally looks a little bit back and avoids trusting the very latest moment, this was necessary to avoid missing events.
 
 ## Build and usage
 
